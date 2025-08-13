@@ -37,7 +37,7 @@
             color: #0f5132;
         }
         .status-ending {
-            background-color: #000000;
+            background-color: #fff3cd;
             color: #664d03;
         }
         .status-expired {
@@ -55,6 +55,19 @@
             max-width: 400px;
             margin: 0 auto;
             padding-top: 50px;
+        }
+        /* Ajustes para os botões de visualização */
+        #showActive:not(.active), #showExpired:not(.active) {
+            color: #333 !important;
+            background-color: #f8f9fa !important;
+        }
+        #showActive.active {
+            background-color: #198754 !important;
+            color: white !important;
+        }
+        #showExpired.active {
+            background-color: #dc3545 !important;
+            color: white !important;
         }
     </style>
 </head>
@@ -94,6 +107,19 @@
         <div id="mainContent" style="display: none;">
             <div class="row justify-content-center">
                 <div class="col-md-10">
+                    <!-- Seletor de Cidade -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>Selecione a Cidade</h5>
+                        </div>
+                        <div class="card-body">
+                            <select class="form-select" id="citySelector">
+                                <option value="Ubatuba">Ubatuba</option>
+                                <option value="Caraguá">Caraguá</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Formulário de Cadastro -->
                     <div class="card mb-4">
                         <div class="card-header">
@@ -127,6 +153,7 @@
                                     <button type="submit" class="btn btn-primary" id="submitBtn">Cadastrar</button>
                                     <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display: none;">Cancelar Edição</button>
                                     <input type="hidden" id="editId">
+                                    <input type="hidden" id="clientCity">
                                 </div>
                             </form>
                         </div>
@@ -153,10 +180,10 @@
                     <!-- Listagem de Clientes -->
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5>Clientes na Promoção</h5>
+                            <h5>Clientes na Promoção - <span id="currentCityDisplay">Ubatuba</span></h5>
                             <div>
-                                <button class="btn btn-sm btn-outline-primary active" id="showActive">No Prazo</button>
-                                <button class="btn btn-sm btn-outline-secondary" id="showExpired">Fim da Promoção</button>
+                                <button class="btn btn-sm btn-outline-success active" id="showActive">No Prazo</button>
+                                <button class="btn btn-sm btn-outline-danger" id="showExpired">Fim da Promoção</button>
                             </div>
                         </div>
                         <div class="card-body">
@@ -239,6 +266,7 @@
         const submitBtn = document.getElementById('submitBtn');
         const cancelEditBtn = document.getElementById('cancelEditBtn');
         const editId = document.getElementById('editId');
+        const clientCity = document.getElementById('clientCity');
         const searchContract = document.getElementById('searchContract');
         const searchBtn = document.getElementById('searchBtn');
         const searchResults = document.getElementById('searchResults');
@@ -247,11 +275,14 @@
         const showExpired = document.getElementById('showExpired');
         const confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        const citySelector = document.getElementById('citySelector');
+        const currentCityDisplay = document.getElementById('currentCityDisplay');
 
         // Variáveis globais
         let currentView = 'active';
         let clientsData = {};
         let clientToDelete = null;
+        let selectedCity = 'Ubatuba';
 
         // Função para formatar data (dd/mm/aaaa)
         function formatDate(dateString) {
@@ -297,6 +328,9 @@
             clientsTableBody.innerHTML = '';
             
             Object.entries(clientsData).forEach(([id, client]) => {
+                // Filtrar por cidade selecionada
+                if (client.city !== selectedCity) return;
+                
                 const endDate = calculateEndDate(client.promoStart, client.promoType);
                 const status = getStatus(endDate);
                 
@@ -386,7 +420,7 @@
             let resultHtml = '';
             
             Object.entries(clientsData).forEach(([id, client]) => {
-                if (client.contractNumber.includes(searchTerm)) {
+                if (client.contractNumber.includes(searchTerm) && client.city === selectedCity) {
                     found = true;
                     const endDate = calculateEndDate(client.promoStart, client.promoType);
                     const status = getStatus(endDate);
@@ -454,7 +488,8 @@
                 contractNumber: contractNumber.value.trim(),
                 clientName: clientName.value.trim(),
                 promoStart: promoStart.value,
-                promoType: promoType.value
+                promoType: promoType.value,
+                city: selectedCity
             };
             
             if (editId.value) {
@@ -514,6 +549,13 @@
                         alert('Erro ao remover: ' + error.message);
                     });
             }
+        });
+
+        // Evento para mudança de cidade
+        citySelector.addEventListener('change', (e) => {
+            selectedCity = e.target.value;
+            currentCityDisplay.textContent = selectedCity;
+            renderTable();
         });
 
         // Função para carregar dados dos clientes
