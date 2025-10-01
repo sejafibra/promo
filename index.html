@@ -516,7 +516,7 @@
             }
         });
 
-        // ========== FIBRA PLAY PREMIUM ==========
+// ========== FIBRA PLAY PREMIUM ==========
 function initFibraPlay() {
     // Referências do DOM para Fibra Play
     const clientForm = document.getElementById('clientForm');
@@ -527,7 +527,6 @@ function initFibraPlay() {
     const submitBtn = document.getElementById('submitBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
     const editId = document.getElementById('editId');
-    const clientCity = document.getElementById('clientCity');
     const searchContract = document.getElementById('searchContract');
     const searchBtn = document.getElementById('searchBtn');
     const searchResults = document.getElementById('searchResults');
@@ -545,12 +544,8 @@ function initFibraPlay() {
     let clientToDelete = null;
     let selectedCity = 'Ubatuba';
 
-    // REMOVER event listeners antigos antes de adicionar novos
-    const newClientForm = clientForm.cloneNode(true);
-    clientForm.parentNode.replaceChild(newClientForm, clientForm);
-
-    // Atualizar referência do formulário
-    const clientFormNew = document.getElementById('clientForm');
+    // Flag para controlar se os event listeners já foram adicionados
+    let listenersInitialized = false;
 
     // Função para formatar data (dd/mm/aaaa)
     function formatDate(dateString) {
@@ -664,15 +659,18 @@ function initFibraPlay() {
         cancelEditBtn.style.display = 'inline-block';
         
         // Rolagem suave para o formulário
-        clientFormNew.scrollIntoView({ behavior: 'smooth' });
+        clientForm.scrollIntoView({ behavior: 'smooth' });
     }
 
     // Função para cancelar edição
     function cancelEdit() {
-        clientFormNew.reset();
+        clientForm.reset();
         editId.value = '';
         submitBtn.textContent = 'Cadastrar';
         cancelEditBtn.style.display = 'none';
+        // Restaurar data atual
+        const today = new Date().toISOString().split('T')[0];
+        promoStart.value = today;
     }
 
     // Função para buscar contrato
@@ -720,86 +718,92 @@ function initFibraPlay() {
         }
     }
 
-    // Event Listeners para Fibra Play - ADICIONAR UMA ÚNICA VEZ
-    clientFormNew.addEventListener('submit', (e) => {
-        e.preventDefault();
+    // Inicializar event listeners apenas uma vez
+    function initializeEventListeners() {
+        if (listenersInitialized) return;
         
-        const clientData = {
-            contractNumber: contractNumber.value.trim(),
-            clientName: clientName.value.trim(),
-            promoStart: promoStart.value,
-            promoType: promoType.value,
-            city: selectedCity
-        };
-        
-        if (editId.value) {
-            // Atualizar cliente existente
-            database.ref('fibraPlay/' + editId.value).update(clientData)
-                .then(() => {
-                    alert('Cliente atualizado com sucesso!');
-                    cancelEdit();
-                })
-                .catch((error) => {
-                    alert('Erro ao atualizar: ' + error.message);
-                });
-        } else {
-            // Adicionar novo cliente
-            database.ref('fibraPlay').push(clientData)
-                .then(() => {
-                    alert('Cliente cadastrado com sucesso!');
-                    clientFormNew.reset();
-                    // Restaurar data atual
-                    const today = new Date().toISOString().split('T')[0];
-                    promoStart.value = today;
-                })
-                .catch((error) => {
-                    alert('Erro ao cadastrar: ' + error.message);
-                });
-        }
-    });
+        clientForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const clientData = {
+                contractNumber: contractNumber.value.trim(),
+                clientName: clientName.value.trim(),
+                promoStart: promoStart.value,
+                promoType: promoType.value,
+                city: selectedCity
+            };
+            
+            if (editId.value) {
+                // Atualizar cliente existente
+                database.ref('fibraPlay/' + editId.value).update(clientData)
+                    .then(() => {
+                        alert('Cliente atualizado com sucesso!');
+                        cancelEdit();
+                    })
+                    .catch((error) => {
+                        alert('Erro ao atualizar: ' + error.message);
+                    });
+            } else {
+                // Adicionar novo cliente
+                database.ref('fibraPlay').push(clientData)
+                    .then(() => {
+                        alert('Cliente cadastrado com sucesso!');
+                        clientForm.reset();
+                        // Restaurar data atual
+                        const today = new Date().toISOString().split('T')[0];
+                        promoStart.value = today;
+                    })
+                    .catch((error) => {
+                        alert('Erro ao cadastrar: ' + error.message);
+                    });
+            }
+        });
 
-    cancelEditBtn.addEventListener('click', cancelEdit);
+        cancelEditBtn.addEventListener('click', cancelEdit);
 
-    searchBtn.addEventListener('click', searchContractNumber);
-    searchContract.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchContractNumber();
-        }
-    });
+        searchBtn.addEventListener('click', searchContractNumber);
+        searchContract.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchContractNumber();
+            }
+        });
 
-    showActive.addEventListener('click', () => {
-        currentView = 'active';
-        showActive.classList.add('active');
-        showExpired.classList.remove('active');
-        renderTable();
-    });
+        showActive.addEventListener('click', () => {
+            currentView = 'active';
+            showActive.classList.add('active');
+            showExpired.classList.remove('active');
+            renderTable();
+        });
 
-    showExpired.addEventListener('click', () => {
-        currentView = 'expired';
-        showExpired.classList.add('active');
-        showActive.classList.remove('active');
-        renderTable();
-    });
+        showExpired.addEventListener('click', () => {
+            currentView = 'expired';
+            showExpired.classList.add('active');
+            showActive.classList.remove('active');
+            renderTable();
+        });
 
-    confirmDeleteBtn.addEventListener('click', () => {
-        if (clientToDelete) {
-            database.ref('fibraPlay/' + clientToDelete).remove()
-                .then(() => {
-                    confirmDeleteModal.hide();
-                    alert('Cliente removido com sucesso!');
-                })
-                .catch((error) => {
-                    alert('Erro ao remover: ' + error.message);
-                });
-        }
-    });
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (clientToDelete) {
+                database.ref('fibraPlay/' + clientToDelete).remove()
+                    .then(() => {
+                        confirmDeleteModal.hide();
+                        alert('Cliente removido com sucesso!');
+                    })
+                    .catch((error) => {
+                        alert('Erro ao remover: ' + error.message);
+                    });
+            }
+        });
 
-    // Evento para mudança de cidade
-    citySelectorFibra.addEventListener('change', (e) => {
-        selectedCity = e.target.value;
-        currentCityDisplay.textContent = selectedCity;
-        renderTable();
-    });
+        // Evento para mudança de cidade
+        citySelectorFibra.addEventListener('change', (e) => {
+            selectedCity = e.target.value;
+            currentCityDisplay.textContent = selectedCity;
+            renderTable();
+        });
+
+        listenersInitialized = true;
+    }
 
     // Função para carregar dados dos clientes
     function loadClientsData() {
@@ -813,11 +817,12 @@ function initFibraPlay() {
     const today = new Date().toISOString().split('T')[0];
     promoStart.value = today;
     
-    // Inicializa os dados
+    // Inicializa os dados e event listeners
     loadClientsData();
+    initializeEventListeners();
 }
-
-        // ========== INDICOU GANHOU ==========
+        
+// ========== INDICOU GANHOU ==========
 function initIndicouGanhou() {
     // Referências do DOM para Indicou Ganhou
     const indicationForm = document.getElementById('indicationForm');
@@ -833,17 +838,11 @@ function initIndicouGanhou() {
     const cancelEditBtnIndicou = document.getElementById('cancelEditBtnIndicou');
     const editIdIndicou = document.getElementById('editIdIndicou');
 
-    // REMOVER event listeners antigos antes de adicionar novos
-    const newIndicationForm = indicationForm.cloneNode(true);
-    indicationForm.parentNode.replaceChild(newIndicationForm, indicationForm);
-
-    // Atualizar referência do formulário
-    const indicationFormNew = document.getElementById('indicationForm');
-
     // Variáveis globais para Indicou Ganhou
     let selectedCityIndicou = "Ubatuba";
     let indicationsData = {};
     let currentUser = "";
+    let listenersInitializedIndicou = false;
 
     // utilidades
     function formatDate(d) {
@@ -928,59 +927,65 @@ function initIndicouGanhou() {
         }
     };
 
-    // formulário - ADICIONAR UMA ÚNICA VEZ
-    indicationFormNew.addEventListener("submit", e => {
-        e.preventDefault();
-        const indicationData = {
-            newContract: newContract.value.trim(),
-            refContract: refContract.value.trim(),
-            newClientName: newClientName.value.trim(),
-            installDate: installDate.value,
-            monthlyValue: monthlyValue.value,
-            city: selectedCityIndicou,
-            launched: "Não",
-            lastUpdate: ""
-        };
-        
-        if (editIdIndicou.value) {
-            database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
-                .then(() => {
-                    alert("Indicação atualizada com sucesso!");
-                    indicationFormNew.reset();
-                    editIdIndicou.value = "";
-                    submitBtnIndicou.textContent = "Cadastrar";
-                    cancelEditBtnIndicou.style.display = "none";
-                    // Restaurar data atual
-                    installDate.value = new Date().toISOString().split("T")[0];
-                })
-                .catch(error => alert("Erro ao atualizar: " + error.message));
-        } else {
-            database.ref('indicouGanhou').push(indicationData)
-                .then(() => {
-                    alert("Indicação cadastrada com sucesso!");
-                    indicationFormNew.reset();
-                    // Restaurar data atual
-                    installDate.value = new Date().toISOString().split("T")[0];
-                })
-                .catch(error => alert("Erro ao cadastrar: " + error.message));
-        }
-    });
+    // Inicializar event listeners apenas uma vez
+    function initializeEventListenersIndicou() {
+        if (listenersInitializedIndicou) return;
 
-    cancelEditBtnIndicou.addEventListener("click", () => {
-        indicationFormNew.reset();
-        editIdIndicou.value = "";
-        submitBtnIndicou.textContent = "Cadastrar";
-        cancelEditBtnIndicou.style.display = "none";
-        // Restaurar data atual
-        installDate.value = new Date().toISOString().split("T")[0];
-    });
+        indicationForm.addEventListener("submit", e => {
+            e.preventDefault();
+            const indicationData = {
+                newContract: newContract.value.trim(),
+                refContract: refContract.value.trim(),
+                newClientName: newClientName.value.trim(),
+                installDate: installDate.value,
+                monthlyValue: monthlyValue.value,
+                city: selectedCityIndicou,
+                launched: "Não",
+                lastUpdate: ""
+            };
+            
+            if (editIdIndicou.value) {
+                database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
+                    .then(() => {
+                        alert("Indicação atualizada com sucesso!");
+                        indicationForm.reset();
+                        editIdIndicou.value = "";
+                        submitBtnIndicou.textContent = "Cadastrar";
+                        cancelEditBtnIndicou.style.display = "none";
+                        // Restaurar data atual
+                        installDate.value = new Date().toISOString().split("T")[0];
+                    })
+                    .catch(error => alert("Erro ao atualizar: " + error.message));
+            } else {
+                database.ref('indicouGanhou').push(indicationData)
+                    .then(() => {
+                        alert("Indicação cadastrada com sucesso!");
+                        indicationForm.reset();
+                        // Restaurar data atual
+                        installDate.value = new Date().toISOString().split("T")[0];
+                    })
+                    .catch(error => alert("Erro ao cadastrar: " + error.message));
+            }
+        });
 
-    // mudança de cidade
-    citySelectorIndicou.addEventListener("change", e => {
-        selectedCityIndicou = e.target.value;
-        currentCityDisplayIndicou.textContent = selectedCityIndicou;
-        renderTableIndicou();
-    });
+        cancelEditBtnIndicou.addEventListener("click", () => {
+            indicationForm.reset();
+            editIdIndicou.value = "";
+            submitBtnIndicou.textContent = "Cadastrar";
+            cancelEditBtnIndicou.style.display = "none";
+            // Restaurar data atual
+            installDate.value = new Date().toISOString().split("T")[0];
+        });
+
+        // mudança de cidade
+        citySelectorIndicou.addEventListener("change", e => {
+            selectedCityIndicou = e.target.value;
+            currentCityDisplayIndicou.textContent = selectedCityIndicou;
+            renderTableIndicou();
+        });
+
+        listenersInitializedIndicou = true;
+    }
 
     // carregar dados
     function loadIndicationsData() {
@@ -1000,6 +1005,7 @@ function initIndicouGanhou() {
 
     // inicializar
     loadIndicationsData();
+    initializeEventListenersIndicou();
 }
     </script>
 </body>
