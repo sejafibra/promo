@@ -849,25 +849,39 @@ function initIndicouGanhou() {
     let selectedCityIndicou = "Ubatuba";
     let indicationsData = {};
     let currentUser = "";
-    let listenersInitializedIndicou = false;
 
-// utilidades - CORRIGIDAS
-function formatDate(d) {
-    const date = new Date(d);
-    date.setDate(date.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
-    return date.toLocaleDateString("pt-BR", {month: "2-digit", year: "numeric"});
-}
+    // REMOVER event listener antigo e criar um novo
+    const newIndicationForm = indicationForm.cloneNode(true);
+    indicationForm.parentNode.replaceChild(newIndicationForm, indicationForm);
 
-function calcDiscountDate(install) {
-    const d = new Date(install);
-    d.setDate(d.getDate() + 1 + 30); // Adiciona 1 dia para compensar o fuso horário + 30 dias
-    return d;
-}
-    
+    // Atualizar referências do DOM
+    const indicationFormNew = document.getElementById('indicationForm');
+    const newContractNew = document.getElementById('newContract');
+    const refContractNew = document.getElementById('refContract');
+    const newClientNameNew = document.getElementById('newClientName');
+    const installDateNew = document.getElementById('installDate');
+    const monthlyValueNew = document.getElementById('monthlyValue');
+    const submitBtnIndicouNew = document.getElementById('submitBtnIndicou');
+    const cancelEditBtnIndicouNew = document.getElementById('cancelEditBtnIndicou');
+    const editIdIndicouNew = document.getElementById('editIdIndicou');
+
+    // utilidades - CORRIGIDAS
+    function formatDate(d) {
+        const date = new Date(d);
+        date.setDate(date.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
+        return date.toLocaleDateString("pt-BR", {month: "2-digit", year: "numeric"});
+    }
+
+    function calcDiscountDate(install) {
+        const d = new Date(install);
+        d.setDate(d.getDate() + 1 + 30); // Adiciona 1 dia para compensar o fuso horário + 30 dias
+        return d;
+    }
+
     function calcDiscountValue(value) {
         return (value * 0.3).toFixed(2);
     }
-    
+
     function getUserName(email) {
         return email.split("@")[0];
     }
@@ -889,17 +903,17 @@ function calcDiscountDate(install) {
                 <td>${formatDate(discountDate)}</td>
                 <td>R$ ${discountValue}</td>
                 <td>
-                    <select class="form-select form-select-sm" onchange="updateLaunched('${c.id}', this.value)">
+                    <select class="form-select form-select-sm" onchange="updateLaunchedIndicou('${c.id}', this.value)">
                         <option value="Não" ${c.launched === "Não" ? "selected" : ""}>Não</option>
                         <option value="Sim" ${c.launched === "Sim" ? "selected" : ""}>Sim</option>
                     </select>
                 </td>
                 <td>${c.lastUpdate || ""}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning me-1" onclick="editIndication('${c.id}')">
+                    <button class="btn btn-sm btn-warning me-1" onclick="editIndicationIndicou('${c.id}')">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteIndication('${c.id}')">
+                    <button class="btn btn-sm btn-danger" onclick="deleteIndicationIndicou('${c.id}')">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -908,27 +922,27 @@ function calcDiscountDate(install) {
         });
     }
 
-    // funções globais para serem acessadas pelo HTML
-    window.updateLaunched = function(id, value) {
+    // funções globais para serem acessadas pelo HTML - COM NOMES ÚNICOS
+    window.updateLaunchedIndicou = function(id, value) {
         database.ref('indicouGanhou/' + id).update({
             launched: value,
             lastUpdate: `${getUserName(currentUser)} - ${new Date().toLocaleString()}`
         });
     };
 
-    window.editIndication = function(id) {
+    window.editIndicationIndicou = function(id) {
         const c = indicationsData[id];
-        newContract.value = c.newContract;
-        refContract.value = c.refContract;
-        newClientName.value = c.newClientName;
-        installDate.value = c.installDate;
-        monthlyValue.value = c.monthlyValue;
-        editIdIndicou.value = id;
-        submitBtnIndicou.textContent = "Atualizar";
-        cancelEditBtnIndicou.style.display = "inline-block";
+        newContractNew.value = c.newContract;
+        refContractNew.value = c.refContract;
+        newClientNameNew.value = c.newClientName;
+        installDateNew.value = c.installDate;
+        monthlyValueNew.value = c.monthlyValue;
+        editIdIndicouNew.value = id;
+        submitBtnIndicouNew.textContent = "Atualizar";
+        cancelEditBtnIndicouNew.style.display = "inline-block";
     };
 
-    window.deleteIndication = function(id) {
+    window.deleteIndicationIndicou = function(id) {
         if (confirm("Tem certeza que deseja excluir esta indicação?")) {
             database.ref('indicouGanhou/' + id).remove()
                 .then(() => alert("Indicação excluída com sucesso!"))
@@ -936,64 +950,60 @@ function calcDiscountDate(install) {
         }
     };
 
-    // Inicializar event listeners apenas uma vez
-    function initializeEventListenersIndicou() {
-        if (listenersInitializedIndicou) return;
+    // Event listener para o formulário - ADICIONADO UMA ÚNICA VEZ
+    indicationFormNew.addEventListener("submit", function handleSubmit(e) {
+        e.preventDefault();
+        const indicationData = {
+            newContract: newContractNew.value.trim(),
+            refContract: refContractNew.value.trim(),
+            newClientName: newClientNameNew.value.trim(),
+            installDate: installDateNew.value,
+            monthlyValue: monthlyValueNew.value,
+            city: selectedCityIndicou,
+            launched: "Não",
+            lastUpdate: ""
+        };
+        
+        if (editIdIndicouNew.value) {
+            database.ref('indicouGanhou/' + editIdIndicouNew.value).update(indicationData)
+                .then(() => {
+                    alert("Indicação atualizada com sucesso!");
+                    indicationFormNew.reset();
+                    editIdIndicouNew.value = "";
+                    submitBtnIndicouNew.textContent = "Cadastrar";
+                    cancelEditBtnIndicouNew.style.display = "none";
+                    // Restaurar data atual
+                    installDateNew.value = new Date().toISOString().split("T")[0];
+                })
+                .catch(error => alert("Erro ao atualizar: " + error.message));
+        } else {
+            database.ref('indicouGanhou').push(indicationData)
+                .then(() => {
+                    alert("Indicação cadastrada com sucesso!");
+                    indicationFormNew.reset();
+                    // Restaurar data atual
+                    installDateNew.value = new Date().toISOString().split("T")[0];
+                })
+                .catch(error => alert("Erro ao cadastrar: " + error.message));
+        }
+    });
 
-indicationForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const indicationData = {
-        newContract: newContract.value.trim(),
-        refContract: refContract.value.trim(),
-        newClientName: newClientName.value.trim(),
-        installDate: installDate.value, // Já está no formato correto (YYYY-MM-DD)
-        monthlyValue: monthlyValue.value,
-        city: selectedCityIndicou,
-        launched: "Não",
-        lastUpdate: ""
-    };
-    
-    if (editIdIndicou.value) {
-        database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
-            .then(() => {
-                alert("Indicação atualizada com sucesso!");
-                indicationForm.reset();
-                editIdIndicou.value = "";
-                submitBtnIndicou.textContent = "Cadastrar";
-                cancelEditBtnIndicou.style.display = "none";
-                // Restaurar data atual
-                installDate.value = new Date().toISOString().split("T")[0];
-            })
-            .catch(error => alert("Erro ao atualizar: " + error.message));
-    } else {
-        database.ref('indicouGanhou').push(indicationData)
-            .then(() => {
-                alert("Indicação cadastrada com sucesso!");
-                indicationForm.reset();
-                // Restaurar data atual
-                installDate.value = new Date().toISOString().split("T")[0];
-            })
-            .catch(error => alert("Erro ao cadastrar: " + error.message));
-    }
-});
-        cancelEditBtnIndicou.addEventListener("click", () => {
-            indicationForm.reset();
-            editIdIndicou.value = "";
-            submitBtnIndicou.textContent = "Cadastrar";
-            cancelEditBtnIndicou.style.display = "none";
-            // Restaurar data atual
-            installDate.value = new Date().toISOString().split("T")[0];
-        });
+    // Event listener para cancelar edição
+    cancelEditBtnIndicouNew.addEventListener("click", () => {
+        indicationFormNew.reset();
+        editIdIndicouNew.value = "";
+        submitBtnIndicouNew.textContent = "Cadastrar";
+        cancelEditBtnIndicouNew.style.display = "none";
+        // Restaurar data atual
+        installDateNew.value = new Date().toISOString().split("T")[0];
+    });
 
-        // mudança de cidade
-        citySelectorIndicou.addEventListener("change", e => {
-            selectedCityIndicou = e.target.value;
-            currentCityDisplayIndicou.textContent = selectedCityIndicou;
-            renderTableIndicou();
-        });
-
-        listenersInitializedIndicou = true;
-    }
+    // Event listener para mudança de cidade
+    citySelectorIndicou.addEventListener("change", e => {
+        selectedCityIndicou = e.target.value;
+        currentCityDisplayIndicou.textContent = selectedCityIndicou;
+        renderTableIndicou();
+    });
 
     // carregar dados
     function loadIndicationsData() {
@@ -1009,11 +1019,10 @@ indicationForm.addEventListener("submit", e => {
     });
 
     // configurar data atual
-    installDate.value = new Date().toISOString().split("T")[0];
+    installDateNew.value = new Date().toISOString().split("T")[0];
 
     // inicializar
     loadIndicationsData();
-    initializeEventListenersIndicou();
 }
     </script>
 </body>
