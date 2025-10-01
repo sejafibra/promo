@@ -383,8 +383,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <script>
-        // Configuração do Firebase para Fibra Play
-        const firebaseConfigFibra = {
+        // CONFIGURAÇÃO ÚNICA DO FIREBASE - usando apenas um projeto
+        const firebaseConfig = {
             apiKey: "AIzaSyCJNVXXYYski3sQMXnzQFsAyyiKVOJUchU",
             authDomain: "promos-2170b.firebaseapp.com",
             projectId: "promos-2170b",
@@ -393,25 +393,10 @@
             appId: "1:659955759459:web:535089ffb2ca10aeb97b56"
         };
 
-        // Configuração do Firebase para Indicou Ganhou
-        const firebaseConfigIndicou = {
-            apiKey: "AIzaSyCcN-3zay99i1am3TACeI7KwY4NTkdlN54",
-            authDomain: "indicou-ganhou.firebaseapp.com",
-            projectId: "indicou-ganhou",
-            storageBucket: "indicou-ganhou.firebasestorage.app",
-            messagingSenderId: "812428893776",
-            appId: "1:812428893776:web:e5a73958d17d83911fbb55"
-        };
-
-        // Inicializa as apps do Firebase
-        const appFibra = firebase.initializeApp(firebaseConfigFibra, "fibraPlay");
-        const databaseFibra = firebase.database(appFibra);
-        
-        const appIndicou = firebase.initializeApp(firebaseConfigIndicou, "indicouGanhou");
-        const databaseIndicou = firebase.database(appIndicou);
-        
-        // Usar a autenticação da app Fibra (compartilhada para login)
-        const auth = firebase.auth(appFibra);
+        // Inicializa apenas uma app do Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database(app);
+        const auth = firebase.auth(app);
 
         // Referências do DOM
         const loginSection = document.getElementById('loginSection');
@@ -513,6 +498,12 @@
             if (user) {
                 const allowedEmails = [
                     'atendente@sejafibra.net', 
+                    'ana@sejafibra.net', 
+                    'alissia@sejafibra.net', 
+                    'eduarda@sejafibra.net', 
+                    'isabela@sejafibra.net', 
+                    'juliana@sejafibra.net', 
+                    'tais@sejafibra.net', 
                     'supervisor@sejafibra.net', 
                     'bioranss@gmail.com'
                 ];
@@ -736,7 +727,7 @@
                 
                 if (editId.value) {
                     // Atualizar cliente existente
-                    databaseFibra.ref('clients/' + editId.value).update(clientData)
+                    database.ref('fibraPlay/' + editId.value).update(clientData)
                         .then(() => {
                             alert('Cliente atualizado com sucesso!');
                             cancelEdit();
@@ -746,7 +737,7 @@
                         });
                 } else {
                     // Adicionar novo cliente
-                    databaseFibra.ref('clients').push(clientData)
+                    database.ref('fibraPlay').push(clientData)
                         .then(() => {
                             alert('Cliente cadastrado com sucesso!');
                             clientForm.reset();
@@ -782,7 +773,7 @@
 
             confirmDeleteBtn.addEventListener('click', () => {
                 if (clientToDelete) {
-                    databaseFibra.ref('clients/' + clientToDelete).remove()
+                    database.ref('fibraPlay/' + clientToDelete).remove()
                         .then(() => {
                             confirmDeleteModal.hide();
                             alert('Cliente removido com sucesso!');
@@ -802,7 +793,7 @@
 
             // Função para carregar dados dos clientes
             function loadClientsData() {
-                databaseFibra.ref('clients').on('value', (snapshot) => {
+                database.ref('fibraPlay').on('value', (snapshot) => {
                     clientsData = snapshot.val() || {};
                     renderTable();
                 });
@@ -894,7 +885,7 @@
 
             // funções globais para serem acessadas pelo HTML
             window.updateLaunched = function(id, value) {
-                databaseIndicou.ref('indications/' + id).update({
+                database.ref('indicouGanhou/' + id).update({
                     launched: value,
                     lastUpdate: `${getUserName(currentUser)} - ${new Date().toLocaleString()}`
                 });
@@ -914,7 +905,7 @@
 
             window.deleteIndication = function(id) {
                 if (confirm("Tem certeza que deseja excluir esta indicação?")) {
-                    databaseIndicou.ref('indications/' + id).remove()
+                    database.ref('indicouGanhou/' + id).remove()
                         .then(() => alert("Indicação excluída com sucesso!"))
                         .catch(error => alert("Erro ao excluir: " + error.message));
                 }
@@ -935,7 +926,7 @@
                 };
                 
                 if (editIdIndicou.value) {
-                    databaseIndicou.ref('indications/' + editIdIndicou.value).update(indicationData)
+                    database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
                         .then(() => {
                             alert("Indicação atualizada com sucesso!");
                             indicationForm.reset();
@@ -945,7 +936,7 @@
                         })
                         .catch(error => alert("Erro ao atualizar: " + error.message));
                 } else {
-                    databaseIndicou.ref('indications').push(indicationData)
+                    database.ref('indicouGanhou').push(indicationData)
                         .then(() => {
                             alert("Indicação cadastrada com sucesso!");
                             indicationForm.reset();
@@ -970,7 +961,7 @@
 
             // carregar dados
             function loadIndicationsData() {
-                databaseIndicou.ref('indications').on('value', snapshot => {
+                database.ref('indicouGanhou').on('value', snapshot => {
                     indicationsData = snapshot.val() || {};
                     renderTableIndicou();
                 });
