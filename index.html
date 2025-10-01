@@ -547,37 +547,42 @@ function initFibraPlay() {
     // Flag para controlar se os event listeners já foram adicionados
     let listenersInitialized = false;
 
-    // Função para formatar data (dd/mm/aaaa)
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
-    }
+    // Função para formatar data (dd/mm/aaaa) - CORRIGIDA
+function formatDate(dateString) {
+    // Corrige o problema do fuso horário adicionando um dia
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
 
-    // Função para calcular a data de término da promoção
-    function calculateEndDate(startDate, promoMonths) {
-        const date = new Date(startDate);
-        date.setMonth(date.getMonth() + parseInt(promoMonths));
-        
-        // Ajuste para o último dia do mês se necessário
-        if (date.getDate() < new Date(startDate).getDate()) {
-            date.setDate(0); // Vai para o último dia do mês anterior
-        }
-        
-        return date.toISOString().split('T')[0];
+// Função para calcular a data de término da promoção - CORRIGIDA
+function calculateEndDate(startDate, promoMonths) {
+    // Corrige o problema do fuso horário
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
+    date.setMonth(date.getMonth() + parseInt(promoMonths));
+    
+    // Ajuste para o último dia do mês se necessário
+    const originalDay = new Date(startDate).getDate();
+    if (date.getDate() < originalDay) {
+        date.setDate(0); // Vai para o último dia do mês anterior
     }
+    
+    return date.toISOString().split('T')[0];
+}
 
-    // Função para calcular dias restantes
-    function daysRemaining(endDate) {
-        const today = new Date();
-        const end = new Date(endDate);
-        const diffTime = end - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays;
-    }
-
+// Função para calcular dias restantes - CORRIGIDA
+function daysRemaining(endDate) {
+    const today = new Date();
+    const end = new Date(endDate);
+    end.setDate(end.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
+    const diffTime = end - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+}
     // Função para determinar o status
     function getStatus(endDate) {
         const days = daysRemaining(endDate);
@@ -722,43 +727,45 @@ function initFibraPlay() {
     function initializeEventListeners() {
         if (listenersInitialized) return;
         
-        clientForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const clientData = {
-                contractNumber: contractNumber.value.trim(),
-                clientName: clientName.value.trim(),
-                promoStart: promoStart.value,
-                promoType: promoType.value,
-                city: selectedCity
-            };
-            
-            if (editId.value) {
-                // Atualizar cliente existente
-                database.ref('fibraPlay/' + editId.value).update(clientData)
-                    .then(() => {
-                        alert('Cliente atualizado com sucesso!');
-                        cancelEdit();
-                    })
-                    .catch((error) => {
-                        alert('Erro ao atualizar: ' + error.message);
-                    });
-            } else {
-                // Adicionar novo cliente
-                database.ref('fibraPlay').push(clientData)
-                    .then(() => {
-                        alert('Cliente cadastrado com sucesso!');
-                        clientForm.reset();
-                        // Restaurar data atual
-                        const today = new Date().toISOString().split('T')[0];
-                        promoStart.value = today;
-                    })
-                    .catch((error) => {
-                        alert('Erro ao cadastrar: ' + error.message);
-                    });
-            }
-        });
-
+clientForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // CORREÇÃO: Ajustar a data para salvar corretamente
+    let adjustedDate = promoStart.value;
+    
+    const clientData = {
+        contractNumber: contractNumber.value.trim(),
+        clientName: clientName.value.trim(),
+        promoStart: adjustedDate, // Já está no formato correto (YYYY-MM-DD)
+        promoType: promoType.value,
+        city: selectedCity
+    };
+    
+    if (editId.value) {
+        // Atualizar cliente existente
+        database.ref('fibraPlay/' + editId.value).update(clientData)
+            .then(() => {
+                alert('Cliente atualizado com sucesso!');
+                cancelEdit();
+            })
+            .catch((error) => {
+                alert('Erro ao atualizar: ' + error.message);
+            });
+    } else {
+        // Adicionar novo cliente
+        database.ref('fibraPlay').push(clientData)
+            .then(() => {
+                alert('Cliente cadastrado com sucesso!');
+                clientForm.reset();
+                // Restaurar data atual
+                const today = new Date().toISOString().split('T')[0];
+                promoStart.value = today;
+            })
+            .catch((error) => {
+                alert('Erro ao cadastrar: ' + error.message);
+            });
+    }
+});
         cancelEditBtn.addEventListener('click', cancelEdit);
 
         searchBtn.addEventListener('click', searchContractNumber);
@@ -844,16 +851,18 @@ function initIndicouGanhou() {
     let currentUser = "";
     let listenersInitializedIndicou = false;
 
-    // utilidades
-    function formatDate(d) {
-        return new Date(d).toLocaleDateString("pt-BR", {month: "2-digit", year: "numeric"});
-    }
-    
-    function calcDiscountDate(install) {
-        const d = new Date(install);
-        d.setDate(d.getDate() + 30);
-        return d;
-    }
+// utilidades - CORRIGIDAS
+function formatDate(d) {
+    const date = new Date(d);
+    date.setDate(date.getDate() + 1); // Adiciona 1 dia para compensar o fuso horário
+    return date.toLocaleDateString("pt-BR", {month: "2-digit", year: "numeric"});
+}
+
+function calcDiscountDate(install) {
+    const d = new Date(install);
+    d.setDate(d.getDate() + 1 + 30); // Adiciona 1 dia para compensar o fuso horário + 30 dias
+    return d;
+}
     
     function calcDiscountValue(value) {
         return (value * 0.3).toFixed(2);
@@ -931,43 +940,42 @@ function initIndicouGanhou() {
     function initializeEventListenersIndicou() {
         if (listenersInitializedIndicou) return;
 
-        indicationForm.addEventListener("submit", e => {
-            e.preventDefault();
-            const indicationData = {
-                newContract: newContract.value.trim(),
-                refContract: refContract.value.trim(),
-                newClientName: newClientName.value.trim(),
-                installDate: installDate.value,
-                monthlyValue: monthlyValue.value,
-                city: selectedCityIndicou,
-                launched: "Não",
-                lastUpdate: ""
-            };
-            
-            if (editIdIndicou.value) {
-                database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
-                    .then(() => {
-                        alert("Indicação atualizada com sucesso!");
-                        indicationForm.reset();
-                        editIdIndicou.value = "";
-                        submitBtnIndicou.textContent = "Cadastrar";
-                        cancelEditBtnIndicou.style.display = "none";
-                        // Restaurar data atual
-                        installDate.value = new Date().toISOString().split("T")[0];
-                    })
-                    .catch(error => alert("Erro ao atualizar: " + error.message));
-            } else {
-                database.ref('indicouGanhou').push(indicationData)
-                    .then(() => {
-                        alert("Indicação cadastrada com sucesso!");
-                        indicationForm.reset();
-                        // Restaurar data atual
-                        installDate.value = new Date().toISOString().split("T")[0];
-                    })
-                    .catch(error => alert("Erro ao cadastrar: " + error.message));
-            }
-        });
-
+indicationForm.addEventListener("submit", e => {
+    e.preventDefault();
+    const indicationData = {
+        newContract: newContract.value.trim(),
+        refContract: refContract.value.trim(),
+        newClientName: newClientName.value.trim(),
+        installDate: installDate.value, // Já está no formato correto (YYYY-MM-DD)
+        monthlyValue: monthlyValue.value,
+        city: selectedCityIndicou,
+        launched: "Não",
+        lastUpdate: ""
+    };
+    
+    if (editIdIndicou.value) {
+        database.ref('indicouGanhou/' + editIdIndicou.value).update(indicationData)
+            .then(() => {
+                alert("Indicação atualizada com sucesso!");
+                indicationForm.reset();
+                editIdIndicou.value = "";
+                submitBtnIndicou.textContent = "Cadastrar";
+                cancelEditBtnIndicou.style.display = "none";
+                // Restaurar data atual
+                installDate.value = new Date().toISOString().split("T")[0];
+            })
+            .catch(error => alert("Erro ao atualizar: " + error.message));
+    } else {
+        database.ref('indicouGanhou').push(indicationData)
+            .then(() => {
+                alert("Indicação cadastrada com sucesso!");
+                indicationForm.reset();
+                // Restaurar data atual
+                installDate.value = new Date().toISOString().split("T")[0];
+            })
+            .catch(error => alert("Erro ao cadastrar: " + error.message));
+    }
+});
         cancelEditBtnIndicou.addEventListener("click", () => {
             indicationForm.reset();
             editIdIndicou.value = "";
